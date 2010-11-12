@@ -91,27 +91,27 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
     }
       
     
-    public function create($name, $actualTableName, $module = null, $forceOverwrite = false)
+    public function create($modelName, $actualTableName, $module = null, $forceOverwrite = false)
     {
         $this->_loadProfile(self::NO_PROFILE_THROW_EXCEPTION);
 
         // Check that there is not a dash or underscore, return if doesnt match regex
-        if (preg_match('#[_-]#', $name)) {
-            throw new Zend_Tool_Project_Provider_Exception('AppTable names should be camel cased.');
+        if (preg_match('#[_-]#', $modelName)) {
+            throw new Zend_Tool_Project_Provider_Exception('Model names should be camel cased.');
         }
         
-        $originalName = $name;
-        $name = ucfirst($name);
+        $originalName = $modelName;
+        $modelName = ucfirst($modelName);
         
         if ($actualTableName == '') {
             throw new Zend_Tool_Project_Provider_Exception(
-            	'You must provide both the AppTable name as well as the actual db table\'s name.'
+            	'You must provide both the Model name as well as the actual db table\'s name.'
             );
         }
         
-        if (self::hasResource($this->_loadedProfile, $name, $module)) {
+        if (self::hasResource($this->_loadedProfile, $modelName, $module)) {
             throw new Zend_Tool_Project_Provider_Exception(
-            	'This project already has a AppTable named ' . $name
+            	'This project already has a AppTable named ' . $modelName
             );
         }
 
@@ -122,10 +122,10 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
         // alert the user about inline converted names
         $tense = (($request->isPretend()) ? 'would be' : 'is');
         
-        if ($name !== $originalName) {
+        if ($modelName !== $originalName) {
             $response->appendContent(
                 'Note: The canonical model name that ' . $tense
-                    . ' used with other providers is "' . $name . '";'
+                    . ' used with other providers is "' . $modelName . '";'
                     . ' not "' . $originalName . '" as supplied',
                 array('color' => array('yellow'))
                 );
@@ -133,7 +133,7 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
         
         try {
             list($tableResource, $tableRowResource) =
-            	self::createResource($this->_loadedProfile, $name, $actualTableName, $module);
+            	self::createResource($this->_loadedProfile, $modelName, $actualTableName, $module);
             	
         } catch (Exception $e) {
             $response = $this->_registry->getResponse();
@@ -203,7 +203,7 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
                 $appTableName,
                 $actualTableName,
                 $module
-                );
+            );
         }
         
         if (count($tableResources) == 0) {
@@ -212,22 +212,33 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
             );
         }
         
+        $response = $this->_registry->getResponse();
+        
         // do the creation
         if ($this->_registry->getRequest()->isPretend()) {
 
             foreach ($tableResources as $tableResource) {
-                $this->_registry->getResponse()->appendContent(
-                	'Would create an AppTable at '  . $tableResource->getContext()->getPath()
+                list($tableResource, $tableRowResource) = $tableResource;
+                $response->appendContent(
+                    'Would create a Model_Table at '  . $tableResource->getContext()->getPath()
+                );
+                $response->appendContent(
+                    'Would create a Model at '  . $tableRowResource->getContext()->getPath()
                 );
             }
-
+            
         } else {
 
             foreach ($tableResources as $tableResource) {
-                $this->_registry->getResponse()->appendContent(
-                	'Creating an AppTable at ' . $tableResource->getContext()->getPath()
+                list($tableResource, $tableRowResource) = $tableResource;
+                $response->appendContent(
+                    'Creating a Model_Table at ' . $tableResource->getContext()->getPath()
+                );
+                $response->appendContent(
+                    'Creating a Model at ' . $tableRowResource->getContext()->getPath()
                 );
                 $tableResource->create();
+                $tableRowResource->create();
             }
 
             $this->_storeProfile();
