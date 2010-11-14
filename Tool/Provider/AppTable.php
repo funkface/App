@@ -183,6 +183,12 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
         /* @var $db Zend_Db_Adapter_Abstract */
         $db = $zendApp->getBootstrap()->getResource('db');
         
+        if(!$db instanceof App_Db_Adapter_Relatable){
+        	throw new Zend_Tool_Project_Provider_Exception(
+        		'A DB adapter implementing App_Db_Adapter_Relatable must be used for AppTable generation'
+        	);
+        }
+        
         $tableResources = array();
         foreach ($db->listTables() as $actualTableName) {
             
