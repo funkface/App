@@ -21,7 +21,7 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
 	
     public static function createResource(
     	Zend_Tool_Project_Profile $profile, 
-    	$appTableName, $actualTableName, $moduleName = null
+    	$appTableName, $actualTableName, $moduleName = null, $relations = null
     ){
         $profileSearchParams = array();
 
@@ -40,7 +40,7 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
             throw new Zend_Tool_Project_Provider_Exception(
                 'A models directory was not found' .
                 (($moduleName) ? ' for module ' . $moduleName . '.' : '.')
-                );
+            );
         }
         
         if (!($appTableDirectory = $modelsDirectory->search('AppTableDirectory'))) {
@@ -49,12 +49,16 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
         
         $appTableFile = $appTableDirectory->createResource(
         	'AppTableFile', 
-        	array('appTableName' => $appTableName, 'actualTableName' => $actualTableName)
+        	array(
+        		'appTableName' => $appTableName,
+        		'actualTableName' => $actualTableName,
+        		'relations' => $relations
+        	)
         );
         
         $appTableRowFile = $modelsDirectory->createResource(
         	'AppTableRowFile', 
-        	array('appTableName' => $appTableName)
+        	array('appTableName' => $appTableName, 'relations' => $relations)
         );
         
         return array($appTableFile, $appTableRowFile);
@@ -204,11 +208,20 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
                     );
             }
             
+            $relations = $db->describeTableRelations($actualTableName);
+            foreach($relations as &$relation)
+            {
+            	$relation['tableClass'] = $this->_convertTableNameToClassName($relation['table']);
+            	$relation['refTableClass'] = $this->_convertTableNameToClassName($relation['refTable']);
+            	$relation['name'] = $this->_convertColumnNameToRelationName($relation['column']);
+            }
+            
             $tableResources[] = self::createResource(
                 $this->_loadedProfile,
                 $appTableName,
                 $actualTableName,
-                $module
+                $module,
+                $relations
             );
         }
         
@@ -249,8 +262,18 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
 
             $this->_storeProfile();
         }
-        
-        
+    }
+    
+    protected function _convertColumnNameToRelationName($columnName)
+    {
+    	if(preg_match('/^(\w+)_id$/', $columnName, $matches))
+    	{
+    		$columnName = $matches[1];
+    	}
+    	$filter = new Zend_Filter_Word_UnderscoreToCamelCase();
+    	$columnName = $filter->filter($columnName);
+    	
+    	return $columnName;
     }
 
 }

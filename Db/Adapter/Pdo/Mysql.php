@@ -32,7 +32,8 @@ implements App_Db_Adapter_Relatable
         
         */
         
-        $sql = "SELECT a.COLUMN_NAME, a.REFERENCED_TABLE_NAME, a.REFERENCED_COLUMN_NAME,
+        $sql = "SELECT 
+        a.TABLE_NAME, a.COLUMN_NAME, a.REFERENCED_TABLE_NAME, a.REFERENCED_COLUMN_NAME,
 		b.ORDINAL_POSITION AS INTERSECTION, c.UPDATE_RULE, c.DELETE_RULE
 		
         FROM information_schema.KEY_COLUMN_USAGE a
@@ -61,12 +62,13 @@ implements App_Db_Adapter_Relatable
         foreach($result as $row)
         {
         	$desc[] = array(
-        		'column' => $row[0],
-        		'refTable' => $row[1],
-        		'refColumn' => $row[2],
-        		'intersection' => (bool)$row[3],
-        		'onUpdate' => $row[4],
-        		'onDelete' => $row[5]
+        		'table' => $row[0],
+        		'column' => $row[1],
+        		'refTable' => $row[2],
+        		'refColumn' => $row[3],
+        		'intersection' => (bool)$row[4],
+        		'onUpdate' => $row[5],
+        		'onDelete' => $row[6]
         	);
         }
         
