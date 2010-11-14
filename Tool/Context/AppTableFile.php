@@ -53,7 +53,7 @@ App_Tool_Context_AppTableFile extends Zend_Tool_Project_Context_Zf_AbstractClass
 			))
 		);
 			
-		$refMap = $this->prepareReferenceMap();
+		$refMap = $this->_prepareReferenceMap();
 		if(!empty($refMap)){
 			$properties[] = new Zend_CodeGenerator_Php_Property(array(
 				'name' => '_referenceMap',
@@ -76,7 +76,7 @@ App_Tool_Context_AppTableFile extends Zend_Tool_Project_Context_Zf_AbstractClass
         return $codeGenFile->generate();
     }
     
-    protected function prepareReferenceMap()
+    protected function _prepareReferenceMap()
     {
     	$refMap = array();
     	
