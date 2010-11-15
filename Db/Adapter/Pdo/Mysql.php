@@ -11,9 +11,11 @@ implements App_Db_Adapter_Relatable
         
         /*
 
-		SELECT a.TABLE_NAME, a.COLUMN_NAME, a.REFERENCED_TABLE_NAME, a.REFERENCED_COLUMN_NAME,
-		b.ORDINAL_POSITION AS PIVOT, c.UPDATE_RULE, c.DELETE_RULE
-		
+        SELECT 
+        a.TABLE_NAME, a.COLUMN_NAME, a.REFERENCED_TABLE_NAME, a.REFERENCED_COLUMN_NAME,
+        b.ORDINAL_POSITION AS INTERSECTION, c.UPDATE_RULE, c.DELETE_RULE,
+        d.REFERENCED_TABLE_NAME AS INTERSECTED_TABLE_NAME, d.REFERENCED_COLUMN_NAME AS INTERSECTED_COLUMN_NAME
+        
         FROM information_schema.KEY_COLUMN_USAGE a
         
         LEFT JOIN information_schema.KEY_COLUMN_USAGE b
@@ -25,6 +27,13 @@ implements App_Db_Adapter_Relatable
         LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS c 
         ON a.CONSTRAINT_SCHEMA = c.CONSTRAINT_SCHEMA
         AND a.CONSTRAINT_NAME = c.CONSTRAINT_NAME
+        
+        LEFT JOIN information_schema.KEY_COLUMN_USAGE d
+        ON a.TABLE_SCHEMA = d.TABLE_SCHEMA
+        AND a.TABLE_NAME = d.TABLE_NAME
+        AND d.REFERENCED_COLUMN_NAME IS NOT NULL
+        AND b.ORDINAL_POSITION = 2
+        AND a.COLUMN_NAME != d.COLUMN_NAME
         
         WHERE a.TABLE_SCHEMA = 'project'
         AND a.REFERENCED_TABLE_SCHEMA = 'project'
@@ -34,7 +43,8 @@ implements App_Db_Adapter_Relatable
         
         $sql = "SELECT 
         a.TABLE_NAME, a.COLUMN_NAME, a.REFERENCED_TABLE_NAME, a.REFERENCED_COLUMN_NAME,
-		b.ORDINAL_POSITION AS INTERSECTION, c.UPDATE_RULE, c.DELETE_RULE
+		b.ORDINAL_POSITION AS INTERSECTION, c.UPDATE_RULE, c.DELETE_RULE,
+		d.REFERENCED_TABLE_NAME AS INTERSECTED_TABLE_NAME, d.REFERENCED_COLUMN_NAME AS INTERSECTED_COLUMN_NAME
 		
         FROM information_schema.KEY_COLUMN_USAGE a
         
@@ -47,6 +57,13 @@ implements App_Db_Adapter_Relatable
         LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS c 
         ON a.CONSTRAINT_SCHEMA = c.CONSTRAINT_SCHEMA
         AND a.CONSTRAINT_NAME = c.CONSTRAINT_NAME
+        
+        LEFT JOIN information_schema.KEY_COLUMN_USAGE d
+        ON a.TABLE_SCHEMA = d.TABLE_SCHEMA
+        AND a.TABLE_NAME = d.TABLE_NAME
+        AND d.REFERENCED_COLUMN_NAME IS NOT NULL
+        AND b.ORDINAL_POSITION = 2
+        AND a.COLUMN_NAME != d.COLUMN_NAME
         
         WHERE a.TABLE_SCHEMA = " . $this->quote($schemaName) . '
         AND a.REFERENCED_TABLE_SCHEMA = ' . $this->quote($schemaName) . '
@@ -68,7 +85,9 @@ implements App_Db_Adapter_Relatable
         		'refColumn' => $row[3],
         		'intersection' => (bool)$row[4],
         		'onUpdate' => $row[5],
-        		'onDelete' => $row[6]
+        		'onDelete' => $row[6],
+                'intTable' => $row[7],
+        	    'intColumn' => $row[8]
         	);
         }
         

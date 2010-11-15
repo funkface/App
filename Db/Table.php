@@ -1,5 +1,5 @@
 <?php
-class App_Db_Table extends Zend_Db_table
+class App_Db_Table extends Zend_Db_Table
 {
 	/**
      * Classname for row
@@ -7,6 +7,7 @@ class App_Db_Table extends Zend_Db_table
      * @var string
      */
     protected $_rowClass = 'App_Db_Table_Row';
+	protected $_rowsetClass = 'App_Db_Table_Rowset';
 	
 	public function getReferenceByRuleKey($ruleKey)
 	{

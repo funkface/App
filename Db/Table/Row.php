@@ -26,8 +26,7 @@ class App_Db_Table_Row extends Zend_Db_Table_Row
 	 */
 	public function isModified()
 	{
-		$diffData = array_intersect_key($this->_data, $this->_modifiedFields);
-		if(count($diffData) > 0)
+		if(count($this->_modifiedFields) > 0)
 		{
 			return true;
 		}
@@ -66,14 +65,25 @@ class App_Db_Table_Row extends Zend_Db_Table_Row
 	{
 		if(!isset($this->_memberRowsets[$memberName]))
 		{
-			$ref = $this->getTable()->getReferenceByRuleKey($memberName);
-			$this->_memberRowsets[$memberName] = 
-				$this->findDependentRowset($ref['refTableClass'], $memberName);
+			$this->loadMemberRowset($memberName);
 		}
 		
 		return $this->_memberRowsets[$memberName];
 	}
 	
-	
+	/**
+	 * 
+	 * @param $memberName
+	 * @param $select
+	 * @return App_Db_Table_Rowset
+	 */
+	public function loadMemberRowset($memberName, Zend_Db_Table_Select $select = null)
+	{
+	    $ref = $this->getTable()->getReferenceByRuleKey($memberName);
+        $this->_memberRowsets[$memberName] = 
+            $this->findDependentRowset($ref['refTableClass'], $memberName, $select);
+            
+        return $this->_memberRowsets[$memberName];
+	}
 	
 }

@@ -21,7 +21,7 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
 	
     public static function createResource(
     	Zend_Tool_Project_Profile $profile, 
-    	$appTableName, $actualTableName, $moduleName = null, $relations = null
+    	$appTableName, $actualTableName, $moduleName = null, $relations = null, $columns = null
     ){
         $profileSearchParams = array();
 
@@ -58,7 +58,11 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
         
         $appTableRowFile = $modelsDirectory->createResource(
         	'AppTableRowFile', 
-        	array('appTableName' => $appTableName, 'relations' => $relations)
+        	array(
+        	   'appTableName' => $appTableName, 
+        	   'relations' => $relations,
+        	   'columns' => $columns
+        	)
         );
         
         return array($appTableFile, $appTableRowFile);
@@ -205,15 +209,24 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
                 throw new Zend_Tool_Project_Provider_Exception(
                     'This AppTable resource already exists, if you wish to overwrite it, '
                     . 'pass the "forceOverwrite" flag to this provider.'
-                    );
+                );
             }
             
             $relations = $db->describeTableRelations($actualTableName);
+            $columns = $db->describeTable($actualTableName);
+            
             foreach($relations as &$relation)
             {
             	$relation['tableClass'] = $this->_convertTableNameToClassName($relation['table']);
             	$relation['refTableClass'] = $this->_convertTableNameToClassName($relation['refTable']);
             	$relation['name'] = $this->_convertColumnNameToRelationName($relation['column']);
+            	$relation['refName'] = $this->_generateReferenceRelationName($relation);
+            	
+            	if($relation['intersection'])
+            	{
+            	    $relation['intTableClass'] = $this->_convertTableNameToClassName($relation['intTable']);
+            	    $relation['intName'] = $this->_generateReferenceRelationName($relation, 'intTable');
+            	}
             }
             
             $tableResources[] = self::createResource(
@@ -221,7 +234,8 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
                 $appTableName,
                 $actualTableName,
                 $module,
-                $relations
+                $relations,
+                $columns
             );
         }
         
@@ -266,14 +280,22 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
     
     protected function _convertColumnNameToRelationName($columnName)
     {
-    	if(preg_match('/^(\w+)_id$/', $columnName, $matches))
-    	{
-    		$columnName = $matches[1];
-    	}
-    	$filter = new Zend_Filter_Word_UnderscoreToCamelCase();
-    	$columnName = $filter->filter($columnName);
-    	
-    	return $columnName;
+    	return lcfirst($this->_convertColumnNameToClassName($columnName));
+    }
+    
+    protected function _convertColumnNameToClassName($columnName)
+    {
+        if(preg_match('/^(\w+)_id$/', $columnName, $matches)) $columnName = $matches[1];
+        $filter = new Zend_Filter_Word_UnderscoreToCamelCase();
+        return $filter->filter($columnName);
     }
 
+    protected function _generateReferenceRelationName($relation, $base = 'column')
+    {
+        $name = $this->_convertColumnNameToClassName($relation[$base]);
+        $name = str_replace($relation['refTableClass'], $relation['tableClass'], $name, $count);
+        if($count < 1) $name .= $relation['tableClass'];
+        return lcfirst($name . 's');
+    }
+    
 }
