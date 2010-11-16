@@ -219,13 +219,38 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
             {
             	$relation['tableClass'] = $this->_convertTableNameToClassName($relation['table']);
             	$relation['refTableClass'] = $this->_convertTableNameToClassName($relation['refTable']);
-            	$relation['name'] = $this->_convertColumnNameToRelationName($relation['column']);
-            	$relation['refName'] = $this->_generateReferenceRelationName($relation);
             	
-            	if($relation['intersection'])
+            	switch($relation['relation'])
             	{
-            	    $relation['intTableClass'] = $this->_convertTableNameToClassName($relation['intTable']);
-            	    $relation['intName'] = $this->_generateReferenceRelationName($relation, 'intTable');
+            	    case 0: // FK on this table
+            	        
+            	        $relation['name'] = $this->_convertColumnNameToMemberName($relation['column']);
+            	        $relation['rules'] = array($relation['name']);
+            	        break;
+
+            	    case 1: // PK on this table
+            	        
+            	        $name = $this->_convertColumnNameToClassName($relation['refColumn']);
+                        $name = str_replace($relation['tableClass'], $relation['refTableClass'], $name, $count);
+                        if($count < 1) $name .= $relation['refTableClass'];
+                        $relation['name'] = lcfirst($name . 's');
+                        
+                        $relation['rules'] = array($this->_convertColumnNameToMemberName($relation['refColumn']));
+                        
+                        break;
+          
+            	    case 2: // Many to many
+
+            	        $relation['intTableClass'] = $this->_convertTableNameToClassName($relation['intTable']);
+                        $name = str_replace(
+                            array($relation['tableClass'], $relation['refTableClass']), '', $relation['intTableClass']
+                        );
+                        $relation['name'] = lcfirst($name . $relation['refTableClass'] . 's');
+      
+                        $relation['rules'] = array(
+                            $this->_convertColumnNameToMemberName($relation['intColumn']),
+                            $this->_convertColumnNameToMemberName($relation['refIntColumn'])
+                        ); 
             	}
             }
             
@@ -278,24 +303,15 @@ class App_Tool_Provider_AppTable extends Zend_Tool_Project_Provider_DbTable
         }
     }
     
-    protected function _convertColumnNameToRelationName($columnName)
-    {
-    	return lcfirst($this->_convertColumnNameToClassName($columnName));
-    }
-    
     protected function _convertColumnNameToClassName($columnName)
     {
         if(preg_match('/^(\w+)_id$/', $columnName, $matches)) $columnName = $matches[1];
         $filter = new Zend_Filter_Word_UnderscoreToCamelCase();
         return $filter->filter($columnName);
     }
-
-    protected function _generateReferenceRelationName($relation, $base = 'column')
-    {
-        $name = $this->_convertColumnNameToClassName($relation[$base]);
-        $name = str_replace($relation['refTableClass'], $relation['tableClass'], $name, $count);
-        if($count < 1) $name .= $relation['tableClass'];
-        return lcfirst($name . 's');
-    }
     
+    protected function _convertColumnNameToMemberName($columnName)
+    {
+        return lcfirst($this->_convertColumnNameToClassName($columnName));
+    }
 }

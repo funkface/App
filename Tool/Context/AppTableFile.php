@@ -52,7 +52,7 @@ App_Tool_Context_AppTableFile extends Zend_Tool_Project_Context_Zf_AbstractClass
 				'defaultValue' => $rowClassName
 			))
 		);
-			
+
 		$refMap = $this->_prepareReferenceMap();
 		if(!empty($refMap)){
 			$properties[] = new Zend_CodeGenerator_Php_Property(array(
@@ -61,6 +61,15 @@ App_Tool_Context_AppTableFile extends Zend_Tool_Project_Context_Zf_AbstractClass
 				'defaultValue' => $refMap
 			));
 		}
+		
+		$relMap = $this->_prepareRelationMap();
+        if(!empty($relMap)){
+            $properties[] = new Zend_CodeGenerator_Php_Property(array(
+                'name' => '_relationMap',
+                'visibility' => Zend_CodeGenerator_Php_Property::VISIBILITY_PROTECTED,
+                'defaultValue' => $relMap
+            ));
+        }
         
         $codeGenFile = new Zend_CodeGenerator_Php_File(array(
             'fileName' => $this->getPath(),
@@ -82,7 +91,7 @@ App_Tool_Context_AppTableFile extends Zend_Tool_Project_Context_Zf_AbstractClass
     	
     	foreach($this->_relations as $relation)
     	{
-    		if($this->_appTableName == $relation['tableClass'])
+    		if($relation['relation'] == 0)
     		{
     			$refMap[$relation['name']] = array(
     				'columns' => array($relation['column']),
@@ -95,4 +104,16 @@ App_Tool_Context_AppTableFile extends Zend_Tool_Project_Context_Zf_AbstractClass
     	return $refMap;
     }
     
+    protected function _prepareRelationMap()
+    {
+        $relMap = array();
+        $mask = array_flip(array('refTableClass', 'intTableClass', 'relation', 'rules'));
+        
+        foreach($this->_relations as $relation)
+        {
+            $relMap[$relation['name']] = array_intersect_key($relation, $mask);
+        }
+        
+        return $relMap;
+    }
 }

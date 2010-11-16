@@ -60,22 +60,26 @@ class App_Tool_Context_AppTableRowFile extends Zend_Tool_Project_Context_Zf_Abst
         
         foreach($this->_relations as $relation)
         {
-            if($this->_appTableName == $relation['tableClass'])
+            switch($relation['relation'])
             {
-                $description = $relation['refTableClass'];
-                if($this->_columns[$relation['column']]['NULLABLE']) $description .= '|null';
-                $description .= ' $' . $relation['name'] . 
-                    ' Many ' . $relation['tableClass'] . ' to One ' . $relation['refTableClass'];
-            }
-            else if($relation['intersection'])
-            {
-                $description = 'App_Db_Table_Rowset $' . $relation['intName'] .
-                    ' Many ' . $relation['refTableClass'] . ' to Many ' . $relation['intTableClass'];
-            }
-            else
-            {
-                $description = 'App_Db_Table_Rowset $' . $relation['refName'] . 
-                   ' One ' . $relation['refTableClass'] . ' to Many ' . $relation['tableClass'];
+                case 0:
+                    $description = $relation['refTableClass'];
+                    if($this->_columns[$relation['column']]['NULLABLE']) $description .= '|null';
+                    $description .= ' $' . $relation['name'] . 
+                        ' maps many ' . $relation['tableClass'] . ' to 1 ' . $relation['refTableClass'];
+                    break;
+                    
+                case 1:
+                    $description = 'App_Db_Table_Rowset $' . $relation['name'] . 
+                        ' maps 1 ' . $relation['tableClass'] . ' to many ' . $relation['refTableClass'];
+                    break;
+                    
+                case 2:
+                    
+                    $description = 'App_Db_Table_Rowset $' . $relation['name'] .
+                        ' maps many ' . $relation['tableClass'] . ' to many ' . $relation['refTableClass'] .
+                        ' through ' . $relation['intTableClass'];
+                    break;
             }
             
             $docblock->setTag(new Zend_CodeGenerator_Php_Docblock_Tag(array(
@@ -92,9 +96,9 @@ class App_Tool_Context_AppTableRowFile extends Zend_Tool_Project_Context_Zf_Abst
                 new Zend_CodeGenerator_Php_Class(array(
                     'name' => $className,
                     'extendedClass' => 'App_Db_Table_Row'
-                    ))
-                )
-            ));
+                ))
+            )
+        ));
         return $codeGenFile->generate();
     }
     

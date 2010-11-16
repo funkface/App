@@ -10,23 +10,45 @@ implements App_Db_Adapter_Relatable
         }
         
         /*
-
-        SELECT 
-        a.TABLE_NAME, a.COLUMN_NAME, a.REFERENCED_TABLE_NAME, a.REFERENCED_COLUMN_NAME,
-        b.ORDINAL_POSITION AS INTERSECTION, c.UPDATE_RULE, c.DELETE_RULE,
-        d.REFERENCED_TABLE_NAME AS INTERSECTED_TABLE_NAME, d.REFERENCED_COLUMN_NAME AS INTERSECTED_COLUMN_NAME
+        #c.UPDATE_RULE, c.DELETE_RULE,
+        #LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS c 
+        #ON a.CONSTRAINT_SCHEMA = c.CONSTRAINT_SCHEMA
+        #AND a.CONSTRAINT_NAME = c.CONSTRAINT_NAME
         
+        SELECT 
+        TABLE_NAME, COLUMN_NAME, 
+        REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME,
+        0 AS RELATION, NULL AS INTERSECTION_TABLE_NAME
+        
+        FROM information_schema.KEY_COLUMN_USAGE
+        
+        WHERE TABLE_SCHEMA = 'project'
+        AND REFERENCED_TABLE_SCHEMA = 'project'
+        AND REFERENCED_COLUMN_NAME IS NOT NULL
+
+        UNION SELECT
+        REFERENCED_TABLE_NAME AS TABLE_NAME, REFERENCED_COLUMN_NAME AS COLUMN_NAME, 
+        TABLE_NAME AS REFERENCED_TABLE_NAME, COLUMN_NAME AS REFERENCED_COLUMN_NAME,
+        1 AS RELATION, NULL AS INTERSECTION_TABLE_NAME
+        
+        FROM information_schema.KEY_COLUMN_USAGE
+        
+        WHERE TABLE_SCHEMA = 'project'
+        AND REFERENCED_TABLE_SCHEMA = 'project'
+        AND REFERENCED_COLUMN_NAME IS NOT NULL
+
+        UNION SELECT 
+        a.REFERENCED_TABLE_NAME AS TABLE_NAME, a.REFERENCED_COLUMN_NAME AS COLUMN_NAME,
+        d.REFERENCED_TABLE_NAME, d.REFERENCED_COLUMN_NAME,
+        b.ORDINAL_POSITION AS RELATION, a.TABLE_NAME AS INTERSECTION_TABLE_NAME
+
         FROM information_schema.KEY_COLUMN_USAGE a
         
-        LEFT JOIN information_schema.KEY_COLUMN_USAGE b
+        INNER JOIN information_schema.KEY_COLUMN_USAGE b
         ON a.TABLE_SCHEMA = b.TABLE_SCHEMA
         AND a.TABLE_NAME = b.TABLE_NAME
         AND b.CONSTRAINT_NAME = 'PRIMARY'
         AND b.ORDINAL_POSITION = 2
-        
-        LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS c 
-        ON a.CONSTRAINT_SCHEMA = c.CONSTRAINT_SCHEMA
-        AND a.CONSTRAINT_NAME = c.CONSTRAINT_NAME
         
         LEFT JOIN information_schema.KEY_COLUMN_USAGE d
         ON a.TABLE_SCHEMA = d.TABLE_SCHEMA
@@ -39,24 +61,51 @@ implements App_Db_Adapter_Relatable
         AND a.REFERENCED_TABLE_SCHEMA = 'project'
         AND a.REFERENCED_COLUMN_NAME IS NOT NULL
         
+        ORDER BY TABLE_NAME, RELATION
         */
         
-        $sql = "SELECT 
-        a.TABLE_NAME, a.COLUMN_NAME, a.REFERENCED_TABLE_NAME, a.REFERENCED_COLUMN_NAME,
-		b.ORDINAL_POSITION AS INTERSECTION, c.UPDATE_RULE, c.DELETE_RULE,
-		d.REFERENCED_TABLE_NAME AS INTERSECTED_TABLE_NAME, d.REFERENCED_COLUMN_NAME AS INTERSECTED_COLUMN_NAME
-		
+        $qSchema = $this->quote($schemaName); 
+        $qTable = $this->quote($tableName);
+        
+        $sql = 'SELECT 
+        TABLE_NAME, COLUMN_NAME, 
+        REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME,
+        0 AS RELATION, NULL AS INTERSECTION_TABLE_NAME,
+        NULL AS INTERSECTION_COLUMN, NULL AS REFERENCED_INTERSECTION_COLUMN
+        
+        FROM information_schema.KEY_COLUMN_USAGE
+        
+        WHERE TABLE_SCHEMA = ' . $qSchema . '
+        AND REFERENCED_TABLE_SCHEMA = ' . $qSchema . '
+        AND TABLE_NAME = ' . $qTable . '
+        AND REFERENCED_COLUMN_NAME IS NOT NULL
+
+        UNION SELECT
+        REFERENCED_TABLE_NAME AS TABLE_NAME, REFERENCED_COLUMN_NAME AS COLUMN_NAME, 
+        TABLE_NAME AS REFERENCED_TABLE_NAME, COLUMN_NAME AS REFERENCED_COLUMN_NAME,
+        1 AS RELATION, NULL AS INTERSECTION_TABLE_NAME,
+        NULL AS INTERSECTION_COLUMN, NULL AS REFERENCED_INTERSECTION_COLUMN
+        
+        FROM information_schema.KEY_COLUMN_USAGE
+        
+        WHERE TABLE_SCHEMA = ' . $qSchema . '
+        AND REFERENCED_TABLE_SCHEMA = ' . $qSchema . '
+        AND REFERENCED_TABLE_NAME = ' . $qTable . '
+        AND REFERENCED_COLUMN_NAME IS NOT NULL
+
+        UNION SELECT 
+        a.REFERENCED_TABLE_NAME AS TABLE_NAME, a.REFERENCED_COLUMN_NAME AS COLUMN_NAME,
+        d.REFERENCED_TABLE_NAME, d.REFERENCED_COLUMN_NAME,
+        b.ORDINAL_POSITION AS RELATION, a.TABLE_NAME AS INTERSECTION_TABLE_NAME,
+        a.COLUMN_NAME AS INTERSECTION_COLUMN, d.COLUMN_NAME AS REFERENCED_INTERSECTION_COLUMN
+
         FROM information_schema.KEY_COLUMN_USAGE a
         
-        LEFT JOIN information_schema.KEY_COLUMN_USAGE b
+        INNER JOIN information_schema.KEY_COLUMN_USAGE b
         ON a.TABLE_SCHEMA = b.TABLE_SCHEMA
         AND a.TABLE_NAME = b.TABLE_NAME
-        AND b.CONSTRAINT_NAME = 'PRIMARY'
+        AND b.CONSTRAINT_NAME = \'PRIMARY\'
         AND b.ORDINAL_POSITION = 2
-        
-        LEFT JOIN information_schema.REFERENTIAL_CONSTRAINTS c 
-        ON a.CONSTRAINT_SCHEMA = c.CONSTRAINT_SCHEMA
-        AND a.CONSTRAINT_NAME = c.CONSTRAINT_NAME
         
         LEFT JOIN information_schema.KEY_COLUMN_USAGE d
         ON a.TABLE_SCHEMA = d.TABLE_SCHEMA
@@ -65,11 +114,12 @@ implements App_Db_Adapter_Relatable
         AND b.ORDINAL_POSITION = 2
         AND a.COLUMN_NAME != d.COLUMN_NAME
         
-        WHERE a.TABLE_SCHEMA = " . $this->quote($schemaName) . '
-        AND a.REFERENCED_TABLE_SCHEMA = ' . $this->quote($schemaName) . '
-        AND (a.TABLE_NAME = ' . $this->quote($tableName) . '
-        OR a.REFERENCED_TABLE_NAME = ' . $this->quote($tableName) . ')
-        AND a.REFERENCED_COLUMN_NAME IS NOT NULL';
+        WHERE a.TABLE_SCHEMA = ' . $qSchema . '
+        AND a.REFERENCED_TABLE_SCHEMA = ' . $qSchema . '
+        AND a.REFERENCED_TABLE_NAME = ' . $qTable . '
+        AND a.REFERENCED_COLUMN_NAME IS NOT NULL
+        
+        ORDER BY TABLE_NAME, RELATION';
         
         $stmt = $this->query($sql);
 
@@ -83,11 +133,10 @@ implements App_Db_Adapter_Relatable
         		'column' => $row[1],
         		'refTable' => $row[2],
         		'refColumn' => $row[3],
-        		'intersection' => (bool)$row[4],
-        		'onUpdate' => $row[5],
-        		'onDelete' => $row[6],
-                'intTable' => $row[7],
-        	    'intColumn' => $row[8]
+        		'relation' => (int)$row[4],
+                'intTable' => $row[5],
+        	    'intColumn' => $row[6],
+                'refIntColumn' => $row[7]
         	);
         }
         

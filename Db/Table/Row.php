@@ -86,4 +86,15 @@ class App_Db_Table_Row extends Zend_Db_Table_Row
         return $this->_memberRowsets[$memberName];
 	}
 	
+	/*
+	
+	   $this->findParentRow($tableClass, $ruleName); // has one
+	   $this->findDependentRowset($tableClass, $ruleName, $select); // has many
+	   $this->findManyToManyRowset($tableClass, $intTableClass, $rule1, $rule2, $select); // many to many
+	
+	
+	 */
+	
+	
+	
 }
